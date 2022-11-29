@@ -1,0 +1,63 @@
+name: Build and Deploy docker images to cloud
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Get image name
+        id: image
+        run: |
+          VERSION=${GITHUB_REF#refs/*/}
+          echo "DOCKER_IMAGE=${{ secrets.DOCKER_USER }}/enzo-react:$VERSION" >> $GITHUB_ENV
+          echo "::set-output name=version::$VERSION"
+      
+      - name: Build docker image
+        run: >-
+          docker build docker/valuxdcs
+          --label "org.label-schema.vcs-ref=$GITHUB_SHA"
+          --tag $DOCKER_IMAGE
+      - run: docker push $DOCKER_IMAGE
+      
+  deploy-do:
+    
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Get ref tag
+        id: ref
+        run: |
+          VERSION=${GITHUB_REF#refs/*/}
+          echo "::set-output name=version::$VERSION"
+      - name: DigitalOcean App Platform deployment
+        uses: digitalocean/app_action@v1.1.4 # replace this with current version from https://github.com/digitalocean/app_action/releases
+        with:
+          app_name: reverse-proxy
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          images: '[{
+                "name": "nginx",
+                "image":{
+                  "registry_type": "DOCKER_HUB",
+                  "registry": "valuxdcs",
+                  "repository": "nginx",
+                  "tag": "${{steps.ref.outputs.version}}"
+                 }
+              }]
