@@ -52,7 +52,7 @@ jobs:
         with:
           app_name: reverse-proxy
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-          images: [{
+          images: '[{
                 "name": "nginx",
                 "image":{
                   "registry_type": "DOCKER_HUB",
@@ -60,4 +60,4 @@ jobs:
                   "repository": "nginx",
                   "tag": "${{steps.ref.outputs.version}}"
                  }
-                }]
+                }]'
