@@ -60,4 +60,4 @@ jobs:
                   "repository": "nginx",
                   "tag": "${{steps.ref.outputs.version}}"
                  }
-                }]'
+              }]'
